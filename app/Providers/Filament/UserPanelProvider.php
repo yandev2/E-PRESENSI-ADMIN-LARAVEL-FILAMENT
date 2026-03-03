@@ -3,14 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\LoginAdmin;
-use App\Filament\User\Pages\Dashboard as PagesDashboard;
 use App\Filament\User\Pages\Profile;
-use App\Filament\User\Widgets\AnalyticKehadiranBulanan;
-use App\Filament\User\Widgets\AnalyticKehadiranMasuk;
-use App\Filament\User\Widgets\KaryawanWidget;
-use App\Livewire\AnalyticKehadiranKeluar;
-use App\Livewire\AnalyticKetidakHadiran;
-use Asmit\ResizedColumn\ResizedColumnPlugin;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -21,8 +14,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;

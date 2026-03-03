@@ -14,7 +14,6 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
-use function Symfony\Component\Clock\now;
 
 class AnalyticKehadiranBulanan extends ChartWidget
 {
