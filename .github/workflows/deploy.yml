@@ -12,11 +12,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use PHP 8.3
+      - name: Use PHP 8.2
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip
+          php-version: '8.2'
+          extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip, xml, dom
           coverage: none
 
       - name: Install dependencies (Build)
@@ -104,27 +104,37 @@ jobs:
           # --- JALANKAN COMPOSER ---
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
           
-          # --- OPTIMASI & LINK KE PUBLIC ---
-          php artisan storage:link || true
-          php artisan filament:upgrade
-          php artisan optimize:clear
-          php artisan config:cache
-          php artisan route:cache
+          # --- 1. LINKING & PREPARATION ---
+          ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
+          rm -rf storage
+          ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
+          mkdir -p bootstrap/cache
           
-          # --- FIX PERMISSIONS (PENTING!) ---
-          # Berikan izin ke folder shared agar Laravel bisa menulis log/cache
-          sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/shared/storage bootstrap/cache
-          sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared/storage bootstrap/cache
+          # --- 2. FIX PERMISSIONS (WAJIB SEBELUM ARTISAN) ---
+          # Kita pastikan user www-data punya hak penuh sebelum Laravel menulis file apa pun
+          sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/shared/storage
+          sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/releases/$REL/bootstrap/cache
+          sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared/storage
+          sudo chmod -R 775 ${{ secrets.APP_DIR }}/releases/$REL/bootstrap/cache
+
+          # --- 3. JALANKAN ARTISAN SEBAGAI WWW-DATA ---
+          # Menggunakan sudo -u www-data memastikan file cache yang dibuat 
+          # otomatis punya izin yang benar untuk web server
+          sudo -u www-data php artisan storage:link || true
+          #sudo -u www-data php artisan filament:upgrade
+          sudo -u www-data php artisan optimize:clear
+          sudo -u www-data php artisan config:cache
+          sudo -u www-data php artisan route:cache
           
-          # --- AKTIVASI ---
+          # --- 4. AKTIVASI ---
           ln -sfn ${{ secrets.APP_DIR }}/releases/$REL ${{ secrets.APP_DIR }}/current
-          "
 
       - name: Post-Deploy (Migration & Reload)
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ${{ secrets.APP_DIR }}/current
           php artisan migrate --force
+          php artisan queue:restart
           sudo -n systemctl reload php8.3-fpm || sudo -n systemctl reload php8.2-fpm || true
           sudo -n systemctl reload nginx || true
           "
