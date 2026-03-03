@@ -25,7 +25,6 @@ jobs:
       - name: Install dependencies (no-dev)
         # Menggunakan --ignore-platform-reqs untuk melewati pengecekan ekstensi di GitHub Runner
         run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs
-
       - name: Node.js setup
         uses: actions/setup-node@v4
         with:
