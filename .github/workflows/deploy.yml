@@ -94,14 +94,21 @@ jobs:
           set -e
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
           
-          # Gunakan --ignore-platform-reqs jika intl di VPS masih bermasalah
-          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
+          # Buat folder fisik sementara jika symlink gagal terbaca oleh Composer
+          mkdir -p bootstrap/cache
+          touch bootstrap/cache/.gitignore
           
+          # Install TANPA menjalankan script discovery otomatis
+          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs --no-scripts
+          
+          # Sekarang baru jalankan discovery secara manual setelah vendor siap
+          php artisan package:discover --ansi
           php artisan storage:link || true
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
           
+          # Terakhir, pastikan permission benar-benar pas
           chgrp -R www-data bootstrap/cache storage || true
           chmod -R ug+rwx bootstrap/cache storage || true
           "
