@@ -16,33 +16,27 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip, dom, curl
+          extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip
           coverage: none
 
       - name: Install dependencies (no-dev)
+        # Kita pakai --no-scripts di build agar tidak butuh .env di komputer GitHub
         run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts
 
-      - name: Node.js setup
+      - name: Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Frontend build
         run: |
-          if [ -f pnpm-lock.yaml ]; then
-            corepack enable && pnpm i --frozen-lockfile && pnpm run build
-          elif [ -f yarn.lock ]; then
-            corepack enable && yarn install --frozen-lockfile && yarn build
-          elif [ -f package-lock.json ]; then
-            npm ci && npm run build
-          else
-            echo "No frontend build step"
-          fi
+          npm install
+          npm run build
 
       - name: Package artifact
         run: |
-          # Jangan hapus bootstrap/cache di sini agar folder fisiknya tetap terbawa
-          rm -rf .git tests node_modules storage
+          # Persis seperti file lama Anda
+          rm -rf .git tests node_modules vendor storage bootstrap/cache
           tar -czf ../app.tar.gz ./
           mv ../app.tar.gz .
 
@@ -76,51 +70,40 @@ jobs:
 
       - name: Upload & extract release
         run: |
+          # Kita definisikan variabel REL di sini
           REL=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
           echo "RELEASE=$REL" >> $GITHUB_ENV
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.APP_DIR }}/releases/$REL"
           scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/$REL/
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.APP_DIR }}/releases/$REL && tar -xzf app.tar.gz && rm app.tar.gz"
 
-      - name: Link shared dirs & Fix Cache Path
+      - name: Link shared dirs (KUNCI SUKSES)
         run: |
+          # Menggunakan variabel ${{ env.RELEASE }} dari GitHub env
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
-          
-          # Hapus folder bawaan jika ada
-          rm -rf storage bootstrap/cache
-          
-          # Buat symlink ke folder shared
           ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
           ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
-          
-          # KHUSUS bootstrap/cache: Kita pastikan foldernya fisik dulu, baru di-link isinya
-          mkdir -p bootstrap/cache
-          mkdir -p ${{ secrets.APP_DIR }}/shared/bootstrap-cache
-          
-          # Pastikan permission folder shared benar-benar terbuka untuk www-data
-          sudo chown -R ${{ secrets.SSH_USER }}:www-data ${{ secrets.APP_DIR }}/shared
-          sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared
+          rm -rf bootstrap/cache
+          ln -sfn ${{ secrets.APP_DIR }}/shared/bootstrap-cache bootstrap/cache
           "
 
-      - name: Composer install & Laravel optimize
+      - name: Composer install & Laravel optimize (server)
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           set -e
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
           
-          # Install tanpa script dulu
-          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs --no-scripts
+          # Gunakan --ignore-platform-reqs jika intl di VPS masih bermasalah
+          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
           
-          # Jalankan manual dengan paksa path cache
-          mkdir -p bootstrap/cache
-          touch bootstrap/cache/.gitignore
-          
-          php artisan package:discover --ansi
-          php artisan config:clear
+          php artisan storage:link || true
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
+          
+          chgrp -R www-data bootstrap/cache storage || true
+          chmod -R ug+rwx bootstrap/cache storage || true
           "
 
       - name: Migrate DB
@@ -135,6 +118,6 @@ jobs:
           ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "
           set -e
           ln -sfn '${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}' '${{ secrets.APP_DIR }}/current'
-          sudo -n systemctl reload php8.2-fpm || true
+          sudo -n systemctl reload php8.2-fpm || sudo -n systemctl reload php8.3-fpm || true
           sudo -n systemctl reload nginx || true
           "
