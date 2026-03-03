@@ -19,12 +19,8 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip, dom, curl
           coverage: none
 
-      - name: Create bootstrap/cache
-        # Penting agar artisan package:discover tidak error saat composer install
-        run: mkdir -p bootstrap/cache && chmod -R 775 bootstrap/cache
-
       - name: Install dependencies (no-dev)
-        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs
+        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts
 
       - name: Node.js setup
         uses: actions/setup-node@v4
@@ -45,8 +41,8 @@ jobs:
 
       - name: Package artifact
         run: |
-          # Bersihkan file sebelum dikirim ke server
-          rm -rf .git tests node_modules storage bootstrap/cache
+          # Jangan hapus bootstrap/cache di sini agar folder fisiknya tetap terbawa
+          rm -rf .git tests node_modules storage
           tar -czf ../app.tar.gz ./
           mv ../app.tar.gz .
 
@@ -86,15 +82,25 @@ jobs:
           scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/$REL/
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.APP_DIR }}/releases/$REL && tar -xzf app.tar.gz && rm app.tar.gz"
 
-      - name: Link shared dirs
+      - name: Link shared dirs & Fix Cache Path
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
+          
+          # Hapus folder bawaan jika ada
+          rm -rf storage bootstrap/cache
+          
+          # Buat symlink ke folder shared
           ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
           ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
-          rm -rf bootstrap/cache
+          
+          # KHUSUS bootstrap/cache: Kita pastikan foldernya fisik dulu, baru di-link isinya
+          mkdir -p bootstrap/cache
           mkdir -p ${{ secrets.APP_DIR }}/shared/bootstrap-cache
-          ln -sfn ${{ secrets.APP_DIR }}/shared/bootstrap-cache bootstrap/cache
+          
+          # Pastikan permission folder shared benar-benar terbuka untuk www-data
+          sudo chown -R ${{ secrets.SSH_USER }}:www-data ${{ secrets.APP_DIR }}/shared
+          sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared
           "
 
       - name: Composer install & Laravel optimize
@@ -103,23 +109,18 @@ jobs:
           set -e
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
           
-          # 1. Pastikan folder cache ada di folder saat ini (link ke shared)
-          mkdir -p bootstrap/cache
-          
-          # 2. Install tanpa menjalankan script Laravel dulu agar tidak error path
+          # Install tanpa script dulu
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs --no-scripts
           
-          # 3. Baru jalankan optimasi secara manual
+          # Jalankan manual dengan paksa path cache
+          mkdir -p bootstrap/cache
+          touch bootstrap/cache/.gitignore
+          
           php artisan package:discover --ansi
-          php artisan storage:link || true
+          php artisan config:clear
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
-          php artisan icons:cache || true
-          
-          # 4. Perbaiki permission agar folder bisa ditulisi oleh Nginx/PHP-FPM
-          chgrp -R www-data bootstrap/cache storage || true
-          chmod -R ug+rwx bootstrap/cache storage || true
           "
 
       - name: Migrate DB
@@ -136,11 +137,4 @@ jobs:
           ln -sfn '${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}' '${{ secrets.APP_DIR }}/current'
           sudo -n systemctl reload php8.2-fpm || true
           sudo -n systemctl reload nginx || true
-          "
-
-      - name: Prune old releases
-        run: |
-          ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          cd ${{ secrets.APP_DIR }}/releases
-          ls -1t | tail -n +6 | xargs rm -rf -- || true
           "
