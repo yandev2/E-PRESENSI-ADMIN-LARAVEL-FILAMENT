@@ -36,15 +36,11 @@ class ShiftForm
                     ->columnSpanFull(),
                 TimePicker::make('jam_masuk')
                     ->prefixIcon(Heroicon::Clock)
-                    ->displayFormat('d-M-Y')
-                    ->format('d-M-Y')
                     ->native(false)
                     ->required(),
                 TimePicker::make('jam_keluar')
                     ->prefixIcon(Heroicon::Clock)
                     ->after(fn($get) => $get('jam_masuk'))
-                    ->displayFormat('d-M-Y')
-                    ->format('d-M-Y')
                     ->native(false)
                     ->required(),
             ]);
