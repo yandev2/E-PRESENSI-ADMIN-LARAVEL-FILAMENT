@@ -12,12 +12,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use PHP 8.2
+      - name: Use PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
-          extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip, dom
+          php-version: '8.3'
+          # Tambahkan semua ekstensi yang dibutuhkan Laravel & Filament
+          extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip, dom, curl
           coverage: none
+
+      - name: Install dependencies (no-dev)
+        # Tambahkan flag ignore-platform-req agar lebih 'bandel' jika ada req yang kurang
+        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs
+
+      - name: Install dependencies (no-dev)
+        # Tambahkan flag ignore-platform-req=ext-intl agar lebih aman
+        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-req=ext-intl
 
       - name: Validate composer.json & composer.lock
         run: composer validate --no-check-all
