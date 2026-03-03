@@ -77,15 +77,19 @@ jobs:
           scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/$REL/
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.APP_DIR }}/releases/$REL && tar -xzf app.tar.gz && rm app.tar.gz"
 
-      - name: Link shared dirs (KUNCI SUKSES)
+      - name: Link shared dirs & Fix Cache Path
         run: |
-          # Menggunakan variabel ${{ env.RELEASE }} dari GitHub env
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
-          ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
+          
+          # Hubungkan .env dan storage dulu
           ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
+          ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
+          
+          # KHUSUS bootstrap/cache: Kita gunakan folder fisik asli dulu supaya Laravel tidak bingung
           rm -rf bootstrap/cache
-          ln -sfn ${{ secrets.APP_DIR }}/shared/bootstrap-cache bootstrap/cache
+          mkdir -p bootstrap/cache
+          chmod -R 775 bootstrap/cache
           "
 
       - name: Composer install & Laravel optimize (server)
@@ -94,23 +98,25 @@ jobs:
           set -e
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
           
-          # Buat folder fisik sementara jika symlink gagal terbaca oleh Composer
-          mkdir -p bootstrap/cache
-          touch bootstrap/cache/.gitignore
-          
-          # Install TANPA menjalankan script discovery otomatis
+          # Install tanpa menjalankan script Laravel otomatis
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs --no-scripts
           
-          # Sekarang baru jalankan discovery secara manual setelah vendor siap
+          # Jalankan optimasi secara manual satu per satu
+          # Kita pakai --env=production untuk memastikan dia membaca config yang benar
           php artisan package:discover --ansi
-          php artisan storage:link || true
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
+          php artisan storage:link || true
           
-          # Terakhir, pastikan permission benar-benar pas
-          chgrp -R www-data bootstrap/cache storage || true
-          chmod -R ug+rwx bootstrap/cache storage || true
+          # Setelah sukses, pindahkan isi cache ke shared dan buat symlink (opsional tapi bagus)
+          cp -r bootstrap/cache/* ${{ secrets.APP_DIR }}/shared/bootstrap-cache/ || true
+          rm -rf bootstrap/cache
+          ln -sfn ${{ secrets.APP_DIR }}/shared/bootstrap-cache bootstrap/cache
+          
+          # Fix Permission Final
+          chgrp -R www-data storage bootstrap/cache || true
+          chmod -R ug+rwx storage bootstrap/cache || true
           "
 
       - name: Migrate DB
