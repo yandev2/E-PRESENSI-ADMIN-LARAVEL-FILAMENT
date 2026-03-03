@@ -1,15 +1,12 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Filament\User\Widgets;
 
-use App\Filament\User\Pages\Dashboard;
 use App\Models\Presensi;
-use Filament\Facades\Filament;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+
 
 class AnalyticKehadiranKeluar extends ChartWidget
 {
