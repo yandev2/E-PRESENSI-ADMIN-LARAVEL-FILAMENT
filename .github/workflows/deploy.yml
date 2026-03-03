@@ -68,17 +68,21 @@ jobs:
 
       - name: Deploy Process
         run: |
+          # Variabel ini dibuat di runner GitHub
           REL=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
           
           scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/tmp-$REL.tar.gz
           
+          # Gunakan \$REL agar VPS yang mengeksekusi variabelnya
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             set -e
             cd ${{ secrets.APP_DIR }}/releases
-            mkdir -p \$REL
-            tar -xzf tmp-\$REL.tar.gz -C \$REL
-            rm tmp-\$REL.tar.gz
-            cd \$REL
+            
+            # Gunakan \$REL di sini
+            mkdir -p $REL
+            tar -xzf tmp-$REL.tar.gz -C $REL
+            rm tmp-$REL.tar.gz
+            cd $REL
             
             # --- LINKING & PREPARATION ---
             ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
@@ -91,17 +95,17 @@ jobs:
             sudo chown -R www-data:www-data bootstrap/cache
             sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared/storage bootstrap/cache
 
-            # --- JALANKAN COMPOSER DI SERVER (PHP 8.2) ---
+            # --- JALANKAN COMPOSER (PHP 8.2) ---
             composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
             
-            # --- ARTISAN OPTIMIZATION SEBAGAI WWW-DATA ---
+            # --- ARTISAN OPTIMIZATION ---
             sudo -u www-data php artisan storage:link || true
             sudo -u www-data php artisan optimize:clear
             sudo -u www-data php artisan config:cache
             sudo -u www-data php artisan route:cache
             
             # --- AKTIVASI ---
-            ln -sfn ${{ secrets.APP_DIR }}/releases/\$REL ${{ secrets.APP_DIR }}/current
+            ln -sfn ${{ secrets.APP_DIR }}/releases/$REL ${{ secrets.APP_DIR }}/current
           "
 
       - name: Post-Deploy (Migration & Reload)
