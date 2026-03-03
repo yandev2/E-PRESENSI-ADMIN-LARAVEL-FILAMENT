@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Filament\User\Widgets;
 
 use App\Models\Karyawan;
 use App\Models\Presensi;
