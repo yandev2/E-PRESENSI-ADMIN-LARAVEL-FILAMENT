@@ -103,7 +103,7 @@ jobs:
           
           # Jalankan optimasi secara manual satu per satu
           # Kita pakai --env=production untuk memastikan dia membaca config yang benar
-          php artisan package:discover --ansi
+          php artisan key:generate --force || true
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
