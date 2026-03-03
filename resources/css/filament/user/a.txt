@@ -1,0 +1,28 @@
+.fi-wi-stats-overview-stat-value{
+    @apply text-2xl font-bold
+}.fi-wi-stats-overview-stat-label-ctn svg{
+    @apply text-green-500
+}.fi-wi-stats-overview-stat-description span{
+    @apply text-gray-600 text-xs 
+} canvas{
+    @apply bg-green-500 h-3.5
+}.fi-wi-stats-overview-stat-chart span{
+    @apply text-green-500 
+}
+
+
+
+
+.account_dashboard .fi-section-content-ctn .fi-section-content .fi-in-entry-content-col .fi-in-text{
+    @apply  text-white tracking-wider
+}
+.account_dashboard .fi-section-content-ctn .fi-section-content .fi-in-entry-content-col span{
+    @apply  text-slate-50 text-xs
+}
+
+.account_dashboard .fi-section-content-ctn .fi-section-content button{
+     @apply  bg-white text-red-800 text-xs
+}
+.account_dashboard .fi-section-content-ctn .fi-section-content button svg{
+     @apply  text-red-800
+}

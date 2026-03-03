@@ -1,0 +1,206 @@
+<?php
+
+namespace App\Filament\User\Pages;
+
+use App\Filament\Infolists\Components\DashboardInfo;
+use App\Filament\User\Widgets\AnalyticKehadiranBulanan;
+use App\Filament\User\Widgets\AnalyticKehadiranMasuk;
+use App\Livewire\AnalyticKehadiranKeluar;
+use App\Livewire\AnalyticKetidakHadiran;
+use App\Models\Jabatan;
+use App\Models\Shift;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Filament\Actions\Action;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Concerns\InteractsWithInfolists;
+use Filament\Infolists\Contracts\HasInfolists;
+use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Livewire;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\Size;
+use Filament\Support\Enums\TextSize;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
+class Dashboard extends BaseDashboard implements HasInfolists
+{
+    use HasPageShield, InteractsWithInfolists;
+
+   protected string $view = 'filament.user.pages.dashboard';
+
+    public function getTitle(): string|Htmlable
+    {
+
+        return 'Dashboards';
+    }
+    protected function infolist(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Section::make()
+                    ->extraAttributes(['class' => 'account_dashboard'])
+                    ->columns([
+                        'sm' => 3,
+                        'md' => 3,
+                        'lg' => 3,
+                        'xl' => 3,
+                        '2xl' => 8
+                    ])
+                    ->schema([
+                        Grid::make(1)
+                            ->columnSpan(7)
+                            ->schema([
+                                TextEntry::make('halo')
+                                    ->hiddenLabel()
+                                    ->alignLeft()
+                                    ->state('Halo, Selamat Datang Kembali 👋​')
+                                    ->alignment(Alignment::Left)
+                                    ->weight(FontWeight::Bold)
+                                    ->size(TextSize::Large)
+                                    ->belowContent(
+                                        Text::make(fn() => auth()->user()->name)
+                                            ->weight(FontWeight::Light)
+                                            ->size(TextSize::Small)
+                                    )
+                            ]),
+                        Actions::make([
+                            Action::make('logout')
+                                ->label('Logout')
+                                ->button()
+                                ->icon(Heroicon::ArrowLeftEndOnRectangle)
+                                ->color('danger')
+                                ->requiresConfirmation()
+                                ->modalHeading('KONFIRMASI')
+                                ->modalWidth(Width::Small)
+                                ->modalDescription('konfirmasi untuk melakukan logout')
+                                ->action(function () {
+                                    Auth::logout();
+                                    request()->session()->invalidate();
+                                    request()->session()->regenerateToken();
+
+                                    return redirect(Filament::getLoginUrl());
+                                })
+
+                        ])
+                            ->columnSpan(1)
+                            ->alignEnd()
+                    ]),
+            ]);
+    }
+    public array $filter = [];
+
+    public function content(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                ...(method_exists($this, 'getFiltersForm') ? [$this->getFiltersFormContentComponent()] : []),
+                $this->getWidgetsContentComponent(),
+            ]);
+    }
+
+    protected function widgetCustom(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+
+              
+                Grid::make()
+                    ->columns([
+                        "sm" => 1,
+                        "md" => 3,
+                        "lg" => 3,
+                        "xl" => 3,
+                        "2xl" => 3
+                    ])
+                    ->schema([
+                        Livewire::make(AnalyticKehadiranMasuk::class, [
+                            'filters' => fn() => ['sds'],
+                        ]),
+                        Livewire::make(AnalyticKehadiranKeluar::class),
+                        Livewire::make(AnalyticKetidakHadiran::class),
+                    ]),
+              //  Livewire::make(AnalyticKehadiranBulanan::class)->extraAttributes(['class' => 'chart-kehadiran-bulanan']),
+            ]);
+    }
+}
+
+.fi-sc-component .chart-kehadiran-bulanan section .fi-section-content{
+ @apply h-80
+}
+
+.fi-wi-widget.fi-grid-col.lg:fi-grid-col-span .fi-wi-chart section .fi-section-content .fi-wi-chart-canvas-ctn.fi-color.fi-color-primary{
+ @apply h-70 w-full
+}
+
+
+
+
+  public function content(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Section::make()
+                    ->extraAttributes(['class' => 'account_dashboard'])
+                    ->columns([
+                        'sm' => 3,
+                        'md' => 3,
+                        'lg' => 3,
+                        'xl' => 3,
+                        '2xl' => 8
+                    ])
+                    ->schema([
+                        Grid::make(1)
+                            ->columnSpan(7)
+                            ->schema([
+                                TextEntry::make('halo')
+                                    ->hiddenLabel()
+                                    ->alignLeft()
+                                    ->state('Halo, Selamat Datang Kembali 👋​')
+                                    ->alignment(Alignment::Left)
+                                    ->weight(FontWeight::Bold)
+                                    ->size(TextSize::Large)
+                                    ->belowContent(
+                                        Text::make(fn() => auth()->user()->name)
+                                            ->weight(FontWeight::Light)
+                                            ->size(TextSize::Small)
+                                    )
+                            ]),
+                        Actions::make([
+                            Action::make('logout')
+                                ->label('Logout')
+                                ->button()
+                                ->icon(Heroicon::ArrowLeftEndOnRectangle)
+                                ->color('danger')
+                                ->requiresConfirmation()
+                                ->modalHeading('KONFIRMASI')
+                                ->modalWidth(Width::Small)
+                                ->modalDescription('konfirmasi untuk melakukan logout')
+                                ->action(function () {
+                                    Auth::logout();
+                                    request()->session()->invalidate();
+                                    request()->session()->regenerateToken();
+
+                                    return redirect(Filament::getLoginUrl());
+                                })
+
+                        ])
+                            ->columnSpan(1)
+                            ->alignEnd()
+                    ]),
+            ]);
+    }

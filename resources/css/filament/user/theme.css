@@ -1,0 +1,207 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/User/**/*';
+@source '../../../../resources/views/filament/user/**/*';
+
+.fi-sidebar-nav{
+    @apply bg-gray-800
+}
+
+.fi-topbar-collapse-sidebar-btn-ctn svg{
+    @apply text-sky-500
+}
+
+.fi-topbar{
+    @apply bg-white dark:bg-black
+}
+
+
+
+
+.fi-sidebar-item.fi-sidebar-item-has-url .fi-sidebar-item-label{
+    @apply text-gray-300 font-light
+}
+
+.fi-sidebar-item.fi-active.fi-sidebar-item-has-url .fi-sidebar-item-btn{
+ @apply bg-sky-500 dark:bg-sky-600
+}
+.fi-sidebar-item.fi-sidebar-item-has-url:not(.fi-active)
+.fi-sidebar-item-btn:hover {
+    @apply bg-gray-600 dark:bg-gray-600;
+}
+/* Hover label */
+.fi-sidebar-item.fi-sidebar-item-has-url
+.fi-sidebar-item-btn:hover
+svg{
+    @apply text-white;
+}
+
+
+.fi-sidebar-item.fi-active.fi-sidebar-item-has-url .fi-sidebar-item-btn .fi-sidebar-item-label{
+    @apply text-white
+}
+
+.fi-sidebar-item.fi-active.fi-sidebar-item-has-url .fi-icon.fi-size-lg.fi-sidebar-item-icon{
+ @apply text-white
+}
+
+span.fi-sidebar-item-badge-ctn span{
+    @apply bg-sky-200 text-gray-800
+}
+
+
+
+.fi-wi-stats-overview-stat.stats-success{
+    @apply text-black shadow-md
+}
+.fi-wi-stats-overview-stat.stats-success .fi-wi-stats-overview-stat-value{
+     @apply text-2xl font-bold
+}
+.fi-wi-stats-overview-stat.stats-success .fi-wi-stats-overview-stat-label-ctn svg{
+    @apply text-green-500 bg-green-100 rounded-lg h-7 w-7 p-1 dark:text-green-600 dark:bg-green-200
+}
+.fi-wi-stats-overview-stat.stats-success .fi-wi-stats-overview-stat-description span{
+    @apply text-gray-600 text-xs dark:text-gray-400 
+}
+.fi-wi-stats-overview-stat.stats-success canvas{
+    @apply bg-linear-to-r from-green-500 to-lime-500 h-3.5
+}
+.fi-wi-stats-overview-stat.stats-success
+.fi-wi-stats-overview-stat-chart span {
+    @apply text-transparent;
+}
+
+
+.fi-wi-stats-overview-stat.stats-warning{
+    @apply text-black shadow-md
+}
+.fi-wi-stats-overview-stat.stats-warning .fi-wi-stats-overview-stat-value{
+     @apply text-2xl font-bold
+}
+.fi-wi-stats-overview-stat.stats-warning .fi-wi-stats-overview-stat-label-ctn svg{
+    @apply  text-amber-500 bg-amber-100 rounded-lg h-7 w-7 p-1 dark:text-amber-700 dark:bg-amber-200
+}
+.fi-wi-stats-overview-stat.stats-warning .fi-wi-stats-overview-stat-description span{
+    @apply text-gray-600 text-xs dark:text-gray-400 
+}
+.fi-wi-stats-overview-stat.stats-warning canvas{
+    @apply bg-linear-to-r from-yellow-400 to-amber-500 h-3.5
+}
+.fi-wi-stats-overview-stat.stats-warning
+.fi-wi-stats-overview-stat-chart span {
+    @apply text-transparent;
+}
+
+
+
+.fi-wi-stats-overview-stat.stats-danger{
+    @apply text-black shadow-md
+}
+.fi-wi-stats-overview-stat.stats-danger .fi-wi-stats-overview-stat-value{
+     @apply text-2xl font-bold
+}
+.fi-wi-stats-overview-stat.stats-danger .fi-wi-stats-overview-stat-label-ctn svg{
+    @apply text-red-500 bg-red-100 rounded-lg h-7 w-7 p-1 dark:text-red-800 dark:bg-red-200
+}
+.fi-wi-stats-overview-stat.stats-danger .fi-wi-stats-overview-stat-description span{
+    @apply text-gray-600 text-xs dark:text-gray-400 
+}
+.fi-wi-stats-overview-stat.stats-danger canvas{
+    @apply bg-linear-to-r from-red-600 to-amber-600 h-3.5
+}
+.fi-wi-stats-overview-stat.stats-danger
+.fi-wi-stats-overview-stat-chart span {
+    @apply text-transparent;
+}
+
+
+
+.fi-wi-stats-overview-stat.stats-info{
+    @apply text-black shadow-md
+}
+.fi-wi-stats-overview-stat.stats-info .fi-wi-stats-overview-stat-value{
+     @apply text-2xl font-bold
+}
+.fi-wi-stats-overview-stat.stats-info .fi-wi-stats-overview-stat-label-ctn svg{
+    @apply  text-blue-500 bg-blue-100 rounded-lg h-7 w-7 p-1 dark:text-blue-800 dark:bg-blue-200
+}
+.fi-wi-stats-overview-stat.stats-info .fi-wi-stats-overview-stat-description span{
+    @apply text-gray-600 text-xs dark:text-gray-400  
+}
+.fi-wi-stats-overview-stat.stats-info canvas{
+    @apply bg-linear-to-r from-violet-600 to-indigo-600 h-3.5
+}
+.fi-wi-stats-overview-stat.stats-info
+.fi-wi-stats-overview-stat-chart span {
+    @apply text-transparent;
+}
+
+
+
+.fi-header.fi-header-has-breadcrumbs button{
+    @apply text-white
+}
+.fi-header.fi-header-has-breadcrumbs svg{
+    @apply text-white
+}
+
+.fi-dropdown.fi-ta-filters-dropdown svg{
+   @apply text-white
+}
+.fi-ta-header-toolbar .fi-dropdown-trigger button{
+@apply text-white
+}
+
+.fi-fo-table-repeater-add.fi-align-right .fi-btn.fi-size-sm.fi-ac-btn-action{
+  @apply bg-success-500 text-white
+}
+
+.fi-breadcrumbs-item .fi-icon.fi-size-md.fi-breadcrumbs-item-separator.fi-ltr{
+    @apply text-gray-500
+}
+
+
+
+.fi-sc-section.filter_dashboard section {
+    @apply shadow-lg/10
+}
+.fi-sc-section.filter_dashboard section header{
+    @apply  bg-linear-to-r from-blue-600 dark:from-blue-700 to-indigo-600 dark:to-indigo-700 rounded-t-lg 
+}
+.fi-sc-section.filter_dashboard section header h2{
+    @apply text-white
+}
+
+
+.fi-sc-section.form-section-custom section {
+    @apply shadow-lg/10
+}
+.fi-sc-section.form-section-custom section header{
+    @apply  bg-linear-to-r from-blue-600 dark:from-blue-700 to-indigo-600 dark:to-indigo-700 rounded-t-xl
+}
+.fi-sc-section.form-section-custom section header h2{
+    @apply text-white
+}
+.fi-sc-section.form-section-custom section header svg{
+    @apply text-white
+}
+
+
+.fi-wi-widget.fi-grid-col.chart-presensi-tahunan section{
+    @apply shadow-lg
+}
+.fi-wi-widget.fi-grid-col.chart-presensi-tahunan section .fi-section-content{
+    @apply h-96 
+}
+.fi-wi-widget.fi-grid-col.chart-presensi-tahunan .fi-wi-chart-canvas-ctn.fi-color.fi-color-primary{
+    @apply h-85 w-full
+}
+.fi-wi-widget.fi-grid-col.chart-presensi-tahunan section .fi-section-header{
+    @apply  bg-linear-to-r from-blue-600 dark:from-blue-700 to-indigo-600 dark:to-indigo-700 rounded-t-xl
+}
+.fi-wi-widget.fi-grid-col.chart-presensi-tahunan section .fi-section-header h2{
+    @apply  text-white
+}
+.fi-wi-widget.fi-grid-col.chart-presensi-tahunan section .fi-section-header .fi-icon-btn.fi-size-md.fi-ac-icon-btn-action svg{
+    @apply  text-white
+}
