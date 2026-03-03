@@ -19,23 +19,22 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip
           coverage: none
 
-      - name: Install dependencies (no-dev)
-        # Kita pakai --no-scripts di build agar tidak butuh .env di komputer GitHub
+      - name: Install dependencies (Build)
         run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts
 
-      - name: Node.js
+      - name: Node.js & Frontend
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Frontend build
+      - name: Build Assets
         run: |
           npm install
           npm run build
 
       - name: Package artifact
         run: |
-          # Persis seperti file lama Anda
+          # Jangan bawa folder vendor ke tarbal agar upload cepat
           rm -rf .git tests node_modules vendor storage bootstrap/cache
           tar -czf ../app.tar.gz ./
           mv ../app.tar.gz .
@@ -68,69 +67,55 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Upload & extract release
+      - name: Deploy Process
         run: |
-          # Kita definisikan variabel REL di sini
+          # 1. Tentukan Nama Rilis
           REL=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
-          echo "RELEASE=$REL" >> $GITHUB_ENV
-          ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.APP_DIR }}/releases/$REL"
-          scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/$REL/
-          ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.APP_DIR }}/releases/$REL && tar -xzf app.tar.gz && rm app.tar.gz"
-
-      - name: Link shared dirs & Fix Cache Path
-        run: |
-          ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
           
-          # Hubungkan .env dan storage dulu
-          ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
-          ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
+          # 2. Upload File
+          scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/tmp-$REL.tar.gz
           
-          # KHUSUS bootstrap/cache: Kita gunakan folder fisik asli dulu supaya Laravel tidak bingung
-          rm -rf bootstrap/cache
-          mkdir -p bootstrap/cache
-          chmod -R 775 bootstrap/cache
-          "
-
-      - name: Composer install & Laravel optimize (server)
-        run: |
+          # 3. Eksekusi di Server
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           set -e
-          cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
+          cd ${{ secrets.APP_DIR }}/releases
+          mkdir -p $REL
+          tar -xzf tmp-$REL.tar.gz -C $REL
+          rm tmp-$REL.tar.gz
+          cd $REL
           
-          # Install tanpa menjalankan script Laravel otomatis
-          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs --no-scripts
+          # --- LANGKAH KRUSIAL: BUAT FOLDER FISIK DULU ---
+          mkdir -p bootstrap/cache
+          mkdir -p storage/framework/{cache,sessions,views}
+          mkdir -p storage/app/public
+          chmod -R 775 bootstrap/cache storage
           
-          # Jalankan optimasi secara manual satu per satu
-          # Kita pakai --env=production untuk memastikan dia membaca config yang benar
-          php artisan key:generate --force || true
+          # Link .env agar artisan bisa baca APP_KEY dll
+          ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
+          
+          # --- JALANKAN COMPOSER (KITA IZINKAN SCRIPTS KALI INI KARENA FOLDER SUDAH ADA) ---
+          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
+          
+          # --- OPTIMASI FILAMENT & LARAVEL ---
+          php artisan filament:upgrade
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
           php artisan storage:link || true
           
-          # Setelah sukses, pindahkan isi cache ke shared dan buat symlink (opsional tapi bagus)
-          cp -r bootstrap/cache/* ${{ secrets.APP_DIR }}/shared/bootstrap-cache/ || true
-          rm -rf bootstrap/cache
-          ln -sfn ${{ secrets.APP_DIR }}/shared/bootstrap-cache bootstrap/cache
+          # --- FIX PERMISSIONS ---
+          chgrp -R www-data bootstrap/cache storage || true
+          chmod -R ug+rwx bootstrap/cache storage || true
           
-          # Fix Permission Final
-          chgrp -R www-data storage bootstrap/cache || true
-          chmod -R ug+rwx storage bootstrap/cache || true
+          # --- AKTIVASI ---
+          ln -sfn ${{ secrets.APP_DIR }}/releases/$REL ${{ secrets.APP_DIR }}/current
           "
 
-      - name: Migrate DB
+      - name: Post-Deploy (Migration & Reload)
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
+          cd ${{ secrets.APP_DIR }}/current
           php artisan migrate --force
-          "
-
-      - name: Activate release
-        run: |
-          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "
-          set -e
-          ln -sfn '${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}' '${{ secrets.APP_DIR }}/current'
-          sudo -n systemctl reload php8.2-fpm || sudo -n systemctl reload php8.3-fpm || true
+          sudo -n systemctl reload php8.3-fpm || sudo -n systemctl reload php8.2-fpm || true
           sudo -n systemctl reload nginx || true
           "
