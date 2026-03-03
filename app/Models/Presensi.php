@@ -13,6 +13,7 @@ class Presensi extends Model
         'karyawan_id',
         'shift_id',
         'jabatan_id',
+        'kantor_id',
         'gaji_id',
         'tanggal',
         'status_masuk',

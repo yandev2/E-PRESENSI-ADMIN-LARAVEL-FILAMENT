@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('karyawan_id')->constrained('karyawans')->cascadeOnDelete();
             $table->foreignId('shift_id')->nullable()->constrained('shifts')->nullOnDelete();
             $table->foreignId('jabatan_id')->nullable()->constrained('jabatans')->nullOnDelete();
+            $table->foreignId('kantor_id')->nullable()->constrained('kantors')->nullOnDelete();
             $table->foreignId('gaji_id')->nullable()->constrained('gajis')->nullOnDelete();
             $table->date('tanggal');
             $table->text('status')->nullable();
