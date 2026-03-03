@@ -84,28 +84,37 @@ jobs:
           rm tmp-$REL.tar.gz
           cd $REL
           
-          # --- LANGKAH KRUSIAL: BUAT FOLDER FISIK DULU ---
-          mkdir -p bootstrap/cache
-          mkdir -p storage/framework/{cache,sessions,views}
-          mkdir -p storage/app/public
-          chmod -R 775 bootstrap/cache storage
+          # --- LANGKAH OTOMATISASI STORAGE ---
+          # 1. Pastikan folder shared sudah memiliki struktur yang benar
+          mkdir -p ${{ secrets.APP_DIR }}/shared/storage/app/public
+          mkdir -p ${{ secrets.APP_DIR }}/shared/storage/framework/{cache,sessions,views}
+          mkdir -p ${{ secrets.APP_DIR }}/shared/storage/logs
           
-          # Link .env agar artisan bisa baca APP_KEY dll
+          # 2. Hapus folder storage bawaan rilis (jika ada) dan hubungkan ke SHARED
+          rm -rf storage
+          ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
+          
+          # 3. Pastikan bootstrap/cache tetap ada dan bisa ditulis
+          mkdir -p bootstrap/cache
+          chmod -R 775 bootstrap/cache
+          
+          # 4. Link .env
           ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
           
-          # --- JALANKAN COMPOSER (KITA IZINKAN SCRIPTS KALI INI KARENA FOLDER SUDAH ADA) ---
+          # --- JALANKAN COMPOSER ---
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
           
-          # --- OPTIMASI FILAMENT & LARAVEL ---
+          # --- OPTIMASI & LINK KE PUBLIC ---
+          php artisan storage:link || true
           php artisan filament:upgrade
+          php artisan optimize:clear
           php artisan config:cache
           php artisan route:cache
-          php artisan view:cache
-          php artisan storage:link || true
           
-          # --- FIX PERMISSIONS ---
-          chgrp -R www-data bootstrap/cache storage || true
-          chmod -R ug+rwx bootstrap/cache storage || true
+          # --- FIX PERMISSIONS (PENTING!) ---
+          # Berikan izin ke folder shared agar Laravel bisa menulis log/cache
+          sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/shared/storage bootstrap/cache
+          sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared/storage bootstrap/cache
           
           # --- AKTIVASI ---
           ln -sfn ${{ secrets.APP_DIR }}/releases/$REL ${{ secrets.APP_DIR }}/current

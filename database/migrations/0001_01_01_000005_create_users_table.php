@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->boolean('is_owner')->nullable()->default(false);
-            $table->string('foto')->nullable();
+            $table->string('avatar')->nullable();
             $table->string('face_id')->nullable();
             $table->string('token')->nullable();
             $table->timestamp('email_verified_at')->nullable();
