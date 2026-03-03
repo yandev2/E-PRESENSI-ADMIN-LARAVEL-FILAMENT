@@ -2,47 +2,32 @@
 
 namespace App\Filament\User\Pages;
 
-use App\Filament\Infolists\Components\DashboardInfo;
-use App\Filament\User\Widgets\AnalyticKehadiranBulanan;
 use App\Filament\User\Widgets\AnalyticKehadiranMasuk;
 use App\Filament\User\Widgets\AnalyticKehadiranTahunan;
+use App\Filament\User\Widgets\AnalyticKehadiranKeluar;
+use App\Filament\User\Widgets\AnalyticKetidakHadiran;
 use App\Filament\User\Widgets\DashboardCountOverlay;
 use App\Filament\User\Widgets\OverlayDashboard;
-use App\Filament\Widgets\OverlayWidget;
-use App\Livewire\AnalyticKehadiranKeluar;
-use App\Livewire\AnalyticKetidakHadiran;
+
 use App\Models\Jabatan;
 use App\Models\Kantor;
 use App\Models\Shift;
 use BackedEnum;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Concerns\InteractsWithInfolists;
-use Filament\Infolists\Contracts\HasInfolists;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
-use Filament\Schemas\Components\Actions;
-use Filament\Schemas\Components\Component;
-use Filament\Schemas\Components\Form;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Livewire;
+
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\Alignment;
-use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\Size;
-use Filament\Support\Enums\TextSize;
-use Filament\Support\Enums\Width;
+
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+
 
 class Dashboard extends BaseDashboard
 {
