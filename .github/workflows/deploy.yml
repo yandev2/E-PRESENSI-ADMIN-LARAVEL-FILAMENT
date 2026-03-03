@@ -34,7 +34,6 @@ jobs:
 
       - name: Package artifact
         run: |
-          # Jangan bawa folder vendor ke tarbal agar upload cepat
           rm -rf .git tests node_modules vendor storage bootstrap/cache
           tar -czf ../app.tar.gz ./
           mv ../app.tar.gz .
@@ -69,72 +68,48 @@ jobs:
 
       - name: Deploy Process
         run: |
-          # 1. Tentukan Nama Rilis
           REL=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
           
-          # 2. Upload File
           scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/tmp-$REL.tar.gz
           
-          # 3. Eksekusi di Server
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          set -e
-          cd ${{ secrets.APP_DIR }}/releases
-          mkdir -p $REL
-          tar -xzf tmp-$REL.tar.gz -C $REL
-          rm tmp-$REL.tar.gz
-          cd $REL
-          
-          # --- LANGKAH OTOMATISASI STORAGE ---
-          # 1. Pastikan folder shared sudah memiliki struktur yang benar
-          mkdir -p ${{ secrets.APP_DIR }}/shared/storage/app/public
-          mkdir -p ${{ secrets.APP_DIR }}/shared/storage/framework/{cache,sessions,views}
-          mkdir -p ${{ secrets.APP_DIR }}/shared/storage/logs
-          
-          # 2. Hapus folder storage bawaan rilis (jika ada) dan hubungkan ke SHARED
-          rm -rf storage
-          ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
-          
-          # 3. Pastikan bootstrap/cache tetap ada dan bisa ditulis
-          mkdir -p bootstrap/cache
-          chmod -R 775 bootstrap/cache
-          
-          # 4. Link .env
-          ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
-          
-          # --- JALANKAN COMPOSER ---
-          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
-          
-          # --- 1. LINKING & PREPARATION ---
-          ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
-          rm -rf storage
-          ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
-          mkdir -p bootstrap/cache
-          
-          # --- 2. FIX PERMISSIONS (WAJIB SEBELUM ARTISAN) ---
-          # Kita pastikan user www-data punya hak penuh sebelum Laravel menulis file apa pun
-          sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/shared/storage
-          sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/releases/$REL/bootstrap/cache
-          sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared/storage
-          sudo chmod -R 775 ${{ secrets.APP_DIR }}/releases/$REL/bootstrap/cache
+            set -e
+            cd ${{ secrets.APP_DIR }}/releases
+            mkdir -p \$REL
+            tar -xzf tmp-\$REL.tar.gz -C \$REL
+            rm tmp-\$REL.tar.gz
+            cd \$REL
+            
+            # --- LINKING & PREPARATION ---
+            ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
+            rm -rf storage
+            ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
+            mkdir -p bootstrap/cache
+            
+            # --- FIX PERMISSIONS ---
+            sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/shared/storage
+            sudo chown -R www-data:www-data bootstrap/cache
+            sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared/storage bootstrap/cache
 
-          # --- 3. JALANKAN ARTISAN SEBAGAI WWW-DATA ---
-          # Menggunakan sudo -u www-data memastikan file cache yang dibuat 
-          # otomatis punya izin yang benar untuk web server
-          sudo -u www-data php artisan storage:link || true
-          #sudo -u www-data php artisan filament:upgrade
-          sudo -u www-data php artisan optimize:clear
-          sudo -u www-data php artisan config:cache
-          sudo -u www-data php artisan route:cache
-          
-          # --- 4. AKTIVASI ---
-          ln -sfn ${{ secrets.APP_DIR }}/releases/$REL ${{ secrets.APP_DIR }}/current
+            # --- JALANKAN COMPOSER DI SERVER (PHP 8.2) ---
+            composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
+            
+            # --- ARTISAN OPTIMIZATION SEBAGAI WWW-DATA ---
+            sudo -u www-data php artisan storage:link || true
+            sudo -u www-data php artisan optimize:clear
+            sudo -u www-data php artisan config:cache
+            sudo -u www-data php artisan route:cache
+            
+            # --- AKTIVASI ---
+            ln -sfn ${{ secrets.APP_DIR }}/releases/\$REL ${{ secrets.APP_DIR }}/current
+          "
 
       - name: Post-Deploy (Migration & Reload)
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          cd ${{ secrets.APP_DIR }}/current
-          php artisan migrate --force
-          php artisan queue:restart
-          sudo -n systemctl reload php8.3-fpm || sudo -n systemctl reload php8.2-fpm || true
-          sudo -n systemctl reload nginx || true
+            cd ${{ secrets.APP_DIR }}/current
+            php artisan migrate --force
+            php artisan queue:restart
+            sudo systemctl reload php8.2-fpm || true
+            sudo systemctl reload nginx || true
           "
