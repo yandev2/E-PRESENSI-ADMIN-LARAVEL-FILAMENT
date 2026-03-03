@@ -2,7 +2,7 @@ name: Deploy Production
 
 on:
   push:
-    branches: [ "main" ] # Perubahan dari master ke main
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -16,23 +16,15 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          # Tambahkan semua ekstensi yang dibutuhkan Laravel & Filament
           extensions: mbstring, intl, pdo, pdo_pgsql, gd, bcmath, zip, dom, curl
           coverage: none
-
-      - name: Install dependencies (no-dev)
-        # Tambahkan flag ignore-platform-req agar lebih 'bandel' jika ada req yang kurang
-        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs
-
-      - name: Install dependencies (no-dev)
-        # Tambahkan flag ignore-platform-req=ext-intl agar lebih aman
-        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-req=ext-intl
 
       - name: Validate composer.json & composer.lock
         run: composer validate --no-check-all
 
       - name: Install dependencies (no-dev)
-        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader
+        # Menggunakan --ignore-platform-reqs untuk melewati pengecekan ekstensi di GitHub Runner
+        run: composer install --no-interaction --prefer-dist --no-progress --no-dev --optimize-autoloader --ignore-platform-reqs
 
       - name: Node.js setup
         uses: actions/setup-node@v4
@@ -53,7 +45,7 @@ jobs:
 
       - name: Package artifact
         run: |
-          # Hapus file yang tidak perlu dikirim ke server
+          # Hapus file yang tidak perlu dikirim ke server untuk menghemat ruang
           rm -rf .git tests node_modules storage bootstrap/cache
           tar -czf ../app.tar.gz ./
           mv ../app.tar.gz .
@@ -88,15 +80,17 @@ jobs:
 
       - name: Upload & extract release
         run: |
-          # Generate nama rilis
+          # Generate nama rilis berdasarkan timestamp
           REL=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
           echo "RELEASE=$REL" >> $GITHUB_ENV
           
-          # Buat folder dan upload
+          # Buat folder rilis di VPS
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.APP_DIR }}/releases/$REL"
+          
+          # Upload file tar.gz
           scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/$REL/
           
-          # Ekstrak dan hapus tar
+          # Ekstrak file di VPS
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.APP_DIR }}/releases/$REL && tar -xzf app.tar.gz && rm app.tar.gz"
 
       - name: Link shared dirs (storage, env, bootstrap cache)
@@ -104,11 +98,11 @@ jobs:
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
           
-          # Link storage dan .env dari folder shared
+          # Hubungkan folder storage dan file .env dari folder shared
           ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
           ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
           
-          # Link bootstrap cache agar tidak error permission
+          # Atur bootstrap cache agar tidak terjadi error permission
           rm -rf bootstrap/cache
           mkdir -p ${{ secrets.APP_DIR }}/shared/bootstrap-cache
           ln -sfn ${{ secrets.APP_DIR }}/shared/bootstrap-cache bootstrap/cache
@@ -120,17 +114,17 @@ jobs:
           set -e
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
           
-          # Install composer dependencies di server
+          # Install dependencies di server (menggunakan PHP server)
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
           
-          # Optimasi Laravel & Filament
+          # Optimasi cache Laravel
           php artisan storage:link || true
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
           php artisan icons:cache || true
           
-          # Permissions
+          # Atur hak akses folder
           chgrp -R www-data bootstrap/cache storage || true
           chmod -R ug+rwx bootstrap/cache storage || true
           "
@@ -139,6 +133,7 @@ jobs:
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}
+          # Jalankan migrasi database
           php artisan migrate --force
           "
 
@@ -146,9 +141,10 @@ jobs:
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "
           set -e
+          # Pindahkan pointer 'current' ke rilis terbaru
           ln -sfn '${{ secrets.APP_DIR }}/releases/${{ env.RELEASE }}' '${{ secrets.APP_DIR }}/current'
           
-          # Reload Service
+          # Reload PHP-FPM dan Nginx agar perubahan langsung aktif
           sudo -n systemctl reload php8.2-fpm || true
           sudo -n systemctl reload nginx || true
           "
@@ -157,5 +153,6 @@ jobs:
         run: |
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ${{ secrets.APP_DIR }}/releases
-          ls -1t | tail -n +6 | xargs rm -rf
+          # Hapus rilis lama, sisakan 5 rilis terbaru saja
+          ls -1t | tail -n +6 | xargs rm -rf -- || true
           "
