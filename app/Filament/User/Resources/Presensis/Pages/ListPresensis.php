@@ -12,11 +12,13 @@ use Filament\Actions\CreateAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\ExposesTableToWidgets;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Grid;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Log;
 
 class ListPresensis extends ListRecords
 {
@@ -124,7 +126,18 @@ class ListPresensis extends ListRecords
                         });
                     }
 
+                    if (empty($userIds)) {
+                        Notification::make()
+                            ->title('Gagal melakukan export')
+                            ->body('Data Presensi yang dipilih tidak tersedia (Kosong)')
+                            ->danger()
+                            ->send();
+
+                        return; 
+                    }
+
                     $userIds = $query->pluck('id')->toArray();
+
                     return redirect()->route('export.presensi', [
                         'id' => implode(',', $userIds),
                         'type' => $type,

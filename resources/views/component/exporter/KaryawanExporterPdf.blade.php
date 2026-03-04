@@ -48,18 +48,16 @@
     <table>
         <thead>
             <tr>
-                <th colspan="17" style="text-align:center; font-size:15px; height:50px;">
+                <th colspan="15" style="text-align:center; font-size:15px; height:50px;">
                     DATA KARYAWAN {{ $json['perusahaan'] }} <br>
                 </th>
             </tr>
             <tr>
                 <th style="width: 1%;">No</th>
                 <th>Nama</th>
-                <th>Email</th>
                 <th>Nip</th>
                 <th>Nik</th>
                 <th>Agama</th>
-                <th>Tempat lahir</th>
                 <th>Tanggal lahir</th>
                 <th>JK</th>
                 <th>Nomor telp</th>
@@ -80,11 +78,9 @@
             <tr>
                 <td>{{ $loop->iteration }}</td>
                 <td>{{ $data['nama'] }}</td>
-                <td>{{ $data['email'] }}</td>
                 <td>{{ $data['nip'] }}</td>
                 <td>{{ $data['nik'] }}</td>
                 <td>{{ $data['agama'] }}</td>
-                <td>{{ $data['tempat_lahir'] }}</td>
                 <td>{{ $data['tanggal_lahir'] }}</td>
                 <td>{{ $data['jenis_kelamin'] }}</td>
                 <td>{{ $data['nomor_telp'] }}</td>
