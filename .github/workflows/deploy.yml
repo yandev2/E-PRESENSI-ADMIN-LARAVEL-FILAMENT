@@ -123,6 +123,9 @@ jobs:
             cd ${{ secrets.APP_DIR }}/current
             php artisan migrate --force
             php artisan queue:restart
-            sudo systemctl reload php8.2-fpm || true
+           # Gunakan reload secara hati-hati agar tidak memutus sesi SSH
+            echo 'Reloading services...'
+            sudo systemctl reload php8.2-fpm || sudo systemctl restart php8.2-fpm || true
             sudo systemctl reload nginx || true
+            echo 'Done!'
           "
