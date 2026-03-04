@@ -36,7 +36,7 @@ class CreatePerusahaan extends CreateRecord
                 'batas_waktu_sebelum_absen_keluar' => 1,
                 'batas_waktu_sesudah_absen_keluar' => 1,
                 'batas_waktu_keterlambatan' => 30,
-                'disable_presensi' => false,
+                'status_presensi' => 'aktif',
             ]);
 
             Notification::make()
