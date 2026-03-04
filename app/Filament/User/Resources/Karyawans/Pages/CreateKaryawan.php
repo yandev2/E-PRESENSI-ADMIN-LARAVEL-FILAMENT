@@ -18,6 +18,7 @@ class CreateKaryawan extends CreateRecord
     protected function handleRecordCreation(array $data): Model
     {
         $path = $data['user']['avatar'];
+        $user = null;
         try {
             Log::info($data);
             $user  = $this->createUser($data);

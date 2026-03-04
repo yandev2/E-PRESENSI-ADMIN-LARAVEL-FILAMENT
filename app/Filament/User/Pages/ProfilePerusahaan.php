@@ -285,8 +285,6 @@ class ProfilePerusahaan extends Page implements HasForms, HasInfolists
                 ->danger()
                 ->title('Ups')
                 ->send();
-
-            $this->halt();
         }
     }
 }

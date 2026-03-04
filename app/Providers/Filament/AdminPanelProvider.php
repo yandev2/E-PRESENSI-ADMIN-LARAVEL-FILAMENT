@@ -12,7 +12,6 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Assets\Css;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
@@ -35,12 +34,10 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->viteTheme('resources/css/filament/admin/theme.css')
-            ->login()
+            ->viteTheme('resources/css/filament/user/theme.css')
             ->colors([
                 'primary' => Color::Amber,
             ])
-           
             ->login(LoginAdmin::class)
             ->spa()
             ->maxContentWidth(Width::Full)

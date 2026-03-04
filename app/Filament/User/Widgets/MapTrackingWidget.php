@@ -125,7 +125,7 @@ class MapTrackingWidget extends MapWidget
                 ->blue()
                 ->fillGreen()
                 ->fillOpacity(0.2)
-                ->radius(50);
+                ->radius(30);
         }
 
         foreach ($kantor as $data) {

@@ -34,7 +34,12 @@ class Presensi extends Model
         return $this->hasOne(Izin::class, foreignKey: 'presensi_id');
     }
 
-    public function jabatan()
+    public function kantor()
+    {
+        return $this->belongsTo(Kantor::class, foreignKey: 'kantor_id');
+    }
+
+     public function jabatan()
     {
         return $this->belongsTo(Jabatan::class, foreignKey: 'jabatan_id');
     }

@@ -22,6 +22,8 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Moataz01\FilamentNotificationSound\FilamentNotificationSoundPlugin;
+use Swis\Filament\Backgrounds\FilamentBackgroundsPlugin;
+use Swis\Filament\Backgrounds\ImageProviders\MyImages;
 use WatheqAlshowaiter\FilamentStickyTableHeader\StickyTableHeaderPlugin;
 
 class UserPanelProvider extends PanelProvider
@@ -31,7 +33,6 @@ class UserPanelProvider extends PanelProvider
         return $panel
             ->id('user')
             ->path('user')
-            ->viteTheme('resources/css/filament/admin/theme.css')
             ->login(LoginAdmin::class)
             ->colors([
                 'primary' => Color::Amber,
@@ -42,7 +43,7 @@ class UserPanelProvider extends PanelProvider
                     ->url(fn(): string => Profile::getUrl())
                     ->icon('heroicon-m-user-circle')
             ])
-           // ->brandName(fn() => view('component.brand_user'))
+            ->brandName(fn() => view('component.brand_user'))
             ->favIcon(fn() => auth()?->user()?->perusahaan?->logo == null ? asset('storage/perusahaan/default_logo.png') :  Storage::url(auth()->user()->perusahaan->logo))
             ->spa()
             ->maxContentWidth(Width::Full)
@@ -57,11 +58,6 @@ class UserPanelProvider extends PanelProvider
             ->pages([])
             ->discoverWidgets(in: app_path('Filament/User/Widgets'), for: 'App\Filament\User\Widgets')
             ->widgets([
-                // KaryawanWidget::class,
-                // AnalyticKehadiranMasuk::class,
-                // AnalyticKehadiranKeluar::class,
-                // AnalyticKetidakHadiran::class,
-                // AnalyticKehadiranBulanan::class
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -78,6 +74,11 @@ class UserPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->plugins([
+                 FilamentBackgroundsPlugin::make()
+                    ->imageProvider(
+                         MyImages::make()
+                            ->directory('images/login/')
+                    ),
                 StickyTableHeaderPlugin::make(), //php artisan filament:assets
                 FilamentNotificationSoundPlugin::make()
                     ->volume(0.8) // Volume (0.0 to 1.0)

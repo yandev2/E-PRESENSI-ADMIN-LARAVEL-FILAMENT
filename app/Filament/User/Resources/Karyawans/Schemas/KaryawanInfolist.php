@@ -11,12 +11,14 @@ use EduardoRibeiroDev\FilamentLeaflet\Support\Markers\Marker;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
 class KaryawanInfolist
@@ -148,6 +150,7 @@ class KaryawanInfolist
                             ->label('Agama')
                             ->placeholder('-'),
                         TextEntry::make('jenis_kelamin')
+                            ->badge()
                             ->color(fn($state) => match ($state) {
                                 'l' => 'info',
                                 'p' => 'danger'
@@ -180,6 +183,56 @@ class KaryawanInfolist
                         TextEntry::make('alamat_ktp')
                             ->placeholder('-')
                             ->label('Alamat ktp')
+                    ]),
+
+                Tab::make('Face ID')
+                    ->icon(Heroicon::User)
+                    ->columns([
+                        'sm' => 1,
+                        'md' => 1,
+                        'lg' => 1,
+                        'xl' => 1,
+                        '2xl' => 1
+                    ])
+                    ->schema([
+                        TextEntry::make('user.face_id')
+                            ->color('info')
+                            ->badge()
+                            ->label('Face id')
+                            ->placeholder('-')
+                            ->icon(Heroicon::FingerPrint),
+                        Actions::make([
+                            Action::make('reset_face')
+                                ->color('danger')
+                                ->label('Reset')
+                                ->button()
+                                ->icon(Heroicon::Trash)
+                                ->requiresConfirmation()
+                                ->modalHeading('KONFIRMASI')
+                                ->modalWidth(Width::Small)
+                                ->hidden(fn($record) => !$record?->user?->face_id)
+                                ->modalDescription(fn($record) => 'konfirmasi untuk mereset Face ID')
+                                ->action(function ($record) {
+                                    $user = $record->user;
+                                    if ($user) {
+                                        try {
+                                            $user->update([
+                                                'face_id' => null,
+                                            ]);
+
+                                            Notification::make()
+                                                ->title('Face ID berhasil direset')
+                                                ->success()
+                                                ->send();
+                                        } catch (\Throwable $th) {
+                                            Notification::make()
+                                                ->title('Terjadi kesalahan saat mereset Face ID')
+                                                ->danger()
+                                                ->send();
+                                        }
+                                    }
+                                })
+                        ])->label(''),
                     ]),
             ]);
     }
@@ -280,8 +333,8 @@ class KaryawanInfolist
                         'sm' => 1,
                         'md' => 1,
                         'lg' => 1,
-                        'xl' => 2,
-                        '2xl' => 2
+                        'xl' => 3,
+                        '2xl' => 3
                     ])
                     ->schema([
                         TextEntry::make('kantor.nama_kantor')

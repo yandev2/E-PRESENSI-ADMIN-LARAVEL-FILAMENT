@@ -73,32 +73,41 @@ jobs:
           
           scp -P "${{ secrets.SSH_PORT }}" app.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_DIR }}/releases/tmp-$REL.tar.gz
           
-          # Gunakan \$REL agar VPS yang mengeksekusi variabelnya
+          # Gunakan double quotes agar secrets bisa terbaca, dan \$ untuk variabel remote
           ssh -p "${{ secrets.SSH_PORT }}" ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             set -e
             cd ${{ secrets.APP_DIR }}/releases
             
-            # Gunakan \$REL di sini
             mkdir -p $REL
             tar -xzf tmp-$REL.tar.gz -C $REL
             rm tmp-$REL.tar.gz
             cd $REL
             
-            # --- LINKING & PREPARATION ---
-            ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
+            # --- LINKING & PREPARATION (FIX DOUBLE STORAGE) ---
+            # 1. Hapus folder storage fisik bawaan rilis agar tidak menjadi storage/storage
             rm -rf storage
+            
+            # 2. Link ke shared storage yang asli
             ln -sfn ${{ secrets.APP_DIR }}/shared/storage storage
+            
+            # 3. Link file environment
+            ln -sfn ${{ secrets.APP_DIR }}/shared/.env .env
+            
+            # 4. Hapus public/storage lama jika ada agar storage:link tidak error/double
+            rm -rf public/storage
+            
             mkdir -p bootstrap/cache
             
             # --- FIX PERMISSIONS ---
             sudo chown -R www-data:www-data ${{ secrets.APP_DIR }}/shared/storage
-            sudo chown -R www-data:www-data bootstrap/cache
+            sudo chown -R www-data:www-data .
             sudo chmod -R 775 ${{ secrets.APP_DIR }}/shared/storage bootstrap/cache
 
             # --- JALANKAN COMPOSER (PHP 8.2) ---
             composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --ignore-platform-reqs
             
             # --- ARTISAN OPTIMIZATION ---
+            # Jalankan sebagai www-data agar link di public dimiliki oleh web server
             sudo -u www-data php artisan storage:link || true
             sudo -u www-data php artisan optimize:clear
             sudo -u www-data php artisan config:cache

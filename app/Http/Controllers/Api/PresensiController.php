@@ -5,15 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ArrayResource;
 use App\Http\Resources\ListResource;
-use App\Models\Izin;
 use App\Models\Jabatan;
 use App\Models\Presensi;
+use App\Models\PresensiSetting;
 use App\Models\Shift;
 use App\Models\User;
-use Arr;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -74,7 +72,7 @@ class PresensiController extends Controller
                 ->whereDate('tanggal', $today)
                 ->first();
 
-              $response  =  $this->getDetailDataPresensi($presensi->id);
+            $response  =  $this->getDetailDataPresensi($presensi->id);
 
             return new ArrayResource(true, 'presensi hari ini', $response);
         } catch (\Throwable $th) {
@@ -102,7 +100,6 @@ class PresensiController extends Controller
             return new ArrayResource(false, $th->getMessage(), null);
         }
     }
-
     public function izin(Request $request)
     {
         try {
@@ -120,20 +117,35 @@ class PresensiController extends Controller
             if (empty($user)) {
                 return new ArrayResource(false, 'token anda tidak valid, silahkan melakukan login ulang', null);
             }
-            $presensi = Presensi::where('karyawan_id', $user->karyawan->id)->whereDate('tanggal', $date)->first();
-            if (!empty($presensi)) {
-                return new ArrayResource(false, 'anda sudah melakukan presensi hari ini', null);
-            }
 
             $perusahaan_id = $user->perusahaan_id;
             $karyawan_id = $user->karyawan->id;
             $shift_id = $user->karyawan->shift_id;
             $jabatan_id =  $user->karyawan->jabatan_id;
             $gaji_id = $user->karyawan?->jabatan?->gajiAktif->id;
+            $kantor_id = $user->karyawan->kantor_id;
+
+            $setting = PresensiSetting::where('perusahaan_id', $perusahaan_id)->first();
+            if ($setting->status_presensi == 'nonaktif') {
+                return new ArrayResource(false, 'Presensi dan pengajuan izin saat ini sedang di matikan oleh operator', null);
+            }
+
+            $batas_string = $setting?->batas_waktu_pengajuan_izin ?? '23:59:00';
+            $batas_waktu = Carbon::createFromFormat('H:i:s', $batas_string, config('app.timezone'));
+
+            if ($date->gt($batas_waktu)) {
+                return new ArrayResource(false, 'Pengajuan izin sudah melewati batas waktu!', null);
+            }
+
+            $presensi = Presensi::where('karyawan_id', $user->karyawan->id)->whereDate('tanggal', $date)->first();
+            if (!empty($presensi)) {
+                return new ArrayResource(false, 'anda sudah melakukan presensi hari ini', null);
+            }
 
             $presensi = Presensi::create([
                 'perusahaan_id' => $perusahaan_id,
                 'karyawan_id' => $karyawan_id,
+                'kantor_id' => $kantor_id,
                 'shift_id' => $shift_id,
                 'jabatan_id' => $jabatan_id,
                 'gaji_id' => $gaji_id,
@@ -164,7 +176,6 @@ class PresensiController extends Controller
             return new ArrayResource(false, $th->getMessage(), null);
         }
     }
-
     public function presensi(Request $request)
     {
         try {
@@ -181,7 +192,12 @@ class PresensiController extends Controller
             $shift_id = $user->karyawan->shift_id;
             $jabatan_id =  $user->karyawan->jabatan_id;
             $gaji_id = $user->karyawan?->jabatan?->gajiAktif->id;
+            $kantor_id = $user->karyawan->kantor_id;
 
+            $setting = PresensiSetting::where('perusahaan_id', $perusahaan_id)->first();
+            if ($setting->status_presensi == 'nonaktif') {
+                return new ArrayResource(false, 'Presensi saat ini sedang di matikan oleh operator', null);
+            }
             $shift = Shift::find($shift_id);
             if (empty($shift)) {
                 return new ArrayResource(false, 'Shift anda tidak terdaftar', null);
@@ -206,19 +222,23 @@ class PresensiController extends Controller
 
                 $shiftTime = $date->copy()->setTimeFromTimeString($shift->jam_masuk);
 
-                if ($date->greaterThan($shiftTime->copy()->addHours(2))) {
-                    return new ArrayResource(false, 'Presensi tidak dapat dilakukan lebih dari 2 jam setelah jam masuk shift.', null);
+                $batas_sesudah_jam_masuk = $setting?->batas_waktu_sesudah_absen_masuk ?? 1;
+                $batas_sebelum_jam_masuk = $setting?->batas_waktu_sebelum_absen_masuk ?? 1;
+                $batas_keterlambatan = $setting?->batas_waktu_keterlambatan ?? 30;
+
+                if ($date->greaterThan($shiftTime->copy()->addHours($batas_sesudah_jam_masuk))) {
+                    return new ArrayResource(false, 'Presensi tidak dapat dilakukan lebih dari ' . $batas_sesudah_jam_masuk . ' jam setelah jam masuk shift.', null);
                 }
-                if ($date->lessThan($shiftTime->copy()->subHours(2))) {
+                if ($date->lessThan($shiftTime->copy()->subHours($batas_sebelum_jam_masuk))) {
                     return new ArrayResource(
                         false,
-                        'Presensi tidak dapat dilakukan lebih awal dari 2 jam sebelum jam masuk shift.',
+                        'Presensi tidak dapat dilakukan lebih awal dari ' . $batas_sebelum_jam_masuk . ' jam sebelum jam masuk shift.',
                         null
                     );
                 }
 
                 $selisih = $shiftTime->diffInMinutes($date, false);
-                $status = ($selisih > 15) ? 'terlambat' : 'tepat waktu';
+                $status = ($selisih > $batas_keterlambatan) ? 'terlambat' : 'tepat waktu';
 
                 $wajah_masuk = $request->file('wajah_masuk');
                 $path = $wajah_masuk->storeAs(
@@ -229,6 +249,7 @@ class PresensiController extends Controller
 
                 $presensi = Presensi::create([
                     'perusahaan_id' => $perusahaan_id,
+                    'kantor_id' => $kantor_id,
                     'karyawan_id' => $karyawan_id,
                     'shift_id' => $shift_id,
                     'jabatan_id' => $jabatan_id,
@@ -262,8 +283,13 @@ class PresensiController extends Controller
                     return new ArrayResource(false, 'anda sudah melakukan presensi masuk dan keluar pada hari ini', null);
                 }
 
+                $batas_sebelum_jam_keluar = (int) ($setting?->batas_waktu_sebelum_absen_keluar ?? 1);
+
                 $shiftKeluarTime = Carbon::createFromFormat('H:i:s', $shift->jam_keluar);
-                if ($date->lt($shiftKeluarTime->subHour())) {
+
+                $waktuMinimalAbsen = $shiftKeluarTime->copy()->subHours($batas_sebelum_jam_keluar);
+
+                if ($date->lt($waktuMinimalAbsen)) {
                     return new ArrayResource(false, 'Belum waktunya absen pulang!', null);
                 }
 
@@ -282,7 +308,7 @@ class PresensiController extends Controller
                     'is_lembur' => $request->is_lembur,
                 ]);
                 $response = $this->getDetailDataPresensi($presensi->id);
-                return new ArrayResource(true, 'presensi masuk berhasil', $response);
+                return new ArrayResource(true, 'presensi keluar berhasil', $response);
             }
         } catch (\Throwable $th) {
             Log::info('PRESENSI ERROR ' . $th->getMessage());
@@ -293,10 +319,11 @@ class PresensiController extends Controller
     //=======================>>>>> helper get data
     private function getDetailDataPresensi($id): array
     {
-        $data = Presensi::with(['perusahaan', 'karyawan', 'shift', 'jabatan', 'gaji', 'izin'])->findOrFail($id);
+        $data = Presensi::with(['perusahaan', 'karyawan', 'shift', 'jabatan', 'gaji', 'izin', 'kantor'])->findOrFail($id);
         $result =  [
             'id' => $data->id ?? null,
             'perusahaan' => $data->perusahaan?->nama_perusahaan ?? null,
+            'kantor' => $data->kantor?->nama_kantor ?? null,
             'karyawan' => $data->karyawan?->user?->name ?? null,
             'shift' => $data->shift?->nama_shift ?? null,
             'jabatan' => $data->jabatan?->nama_jabatan ?? null,

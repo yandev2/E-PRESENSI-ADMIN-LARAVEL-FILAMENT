@@ -45,6 +45,12 @@ class IzinsTable
                     ->sortable()
                     ->badge()
                     ->color('info'),
+                TextColumn::make('deskripsi')
+                    ->label('Keterangan')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
                 ImageColumn::make('file')
                     ->label('File')
                     ->width(80)
