@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('batas_waktu_sebelum_absen_keluar')->default(1);
             $table->integer('batas_waktu_sesudah_absen_keluar')->default(1);
             $table->integer('batas_waktu_keterlambatan')->default(30);
-            $table->boolean('status_presensi')->default('aktif');
+            $table->text('status_presensi')->default('aktif');
         });
     }
 
