@@ -26,15 +26,16 @@ class MapTrackingWidget extends MapWidget
     protected bool $hasFullscreenControl = true;
     protected bool $hasSearchControl = true;
     protected static ?string $pollingInterval = '5s';
-    protected int $defaultZoom = 30;
+    protected int $defaultZoom = 18;
+    protected int $maxZoom = 25;
+
     protected function getMapCenter(): array
     {
         $perusahaan = auth()->user()->perusahaan;
         if (!empty($perusahaan->lokasi)) {
             $lokasiArray = explode(',', $perusahaan->lokasi);
             return $lokasiArray;
-        }
-        else{
+        } else {
             return [-3.1606487928814047, 102.93786372785712];
         }
     }
@@ -125,7 +126,7 @@ class MapTrackingWidget extends MapWidget
                 ->blue()
                 ->fillGreen()
                 ->fillOpacity(0.2)
-                ->radius(30);
+                ->radius(20);
         }
 
         foreach ($kantor as $data) {
